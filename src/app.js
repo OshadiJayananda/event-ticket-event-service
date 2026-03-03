@@ -1,9 +1,9 @@
 const express = require("express");
 const cors = require("cors");
-const helmet = require("helmet"); // You need to install this: npm install helmet
+const helmet = require("helmet");
 
-// Import routes (you'll create this next)
-const eventRoutes = require("./routes/event.routes");
+// Import routes - NOTE THE CORRECT FILENAME WITH DOT
+const eventRoutes = require("./routes/event.routes"); // Make sure this is event.routes, not eventRoutes
 
 // Import middleware
 const { errorHandler } = require("./middleware/errorHandler");
@@ -18,7 +18,7 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
   : [];
 
 // Security middleware
-app.use(helmet()); // Adds various HTTP headers for security
+app.use(helmet());
 
 // CORS middleware
 app.use(
@@ -35,7 +35,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // =======================
-// Request Logging Middleware (for development)
+// Request Logging Middleware
 // =======================
 if (process.env.NODE_ENV === "development") {
   app.use((req, res, next) => {
@@ -56,7 +56,7 @@ app.get("/health", (req, res) => {
   });
 });
 
-// Root route (for backward compatibility)
+// Root route
 app.get("/", (req, res) => {
   res.json({
     message: "Event Service Running",
@@ -71,18 +71,18 @@ app.get("/", (req, res) => {
 app.use("/api/events", eventRoutes);
 
 // =======================
-// 404 Handler for undefined routes
+// 404 Handler
 // =======================
-app.use("*", (req, res) => {
+app.use((req, res) => {
   res.status(404).json({
     success: false,
-    message: `Cannot find ${req.originalUrl} on this server`,
+    message: `Cannot find ${req.method} ${req.originalUrl} on this server`,
     timestamp: new Date().toISOString(),
   });
 });
 
 // =======================
-// Error Handler Middleware
+// Error Handler
 // =======================
 app.use(errorHandler);
 

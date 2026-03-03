@@ -103,7 +103,7 @@ class EventController {
       const events = await eventService.getEventsByOrganizer(
         req.params.organizerId,
       );
-
+      console.log("Organizer , organizerId", req.params.organizerId);
       return ApiResponse.success(
         res,
         events,

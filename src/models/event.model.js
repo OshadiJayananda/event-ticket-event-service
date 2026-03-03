@@ -116,11 +116,12 @@ eventSchema.methods.updateSeats = async function (
 };
 
 // Pre-save middleware to set availableSeats equal to totalSeats for new events
-eventSchema.pre("save", function (next) {
+// Pre-save middleware to set availableSeats equal to totalSeats for new events
+eventSchema.pre("validate", function (next) {
   if (this.isNew) {
     this.availableSeats = this.totalSeats;
   }
-  next();
+  // next();
 });
 
 const Event = mongoose.model("Event", eventSchema);

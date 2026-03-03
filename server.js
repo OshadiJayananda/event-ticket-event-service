@@ -1,5 +1,5 @@
 require("dotenv").config();
-const app = require("./src/app");
+const app = require("./src/app"); // Make sure this path is correct
 const connectDB = require("./src/config/db");
 
 const PORT = process.env.PORT || 5003;
@@ -18,22 +18,14 @@ process.on("uncaughtException", (err) => {
 // Connect to MongoDB
 // =======================
 console.log("🔌 Connecting to MongoDB...");
-console.log("MONGO_URI:", process.env.MONGO_URI ? "✅ Found" : "❌ Not found");
+console.log("MONGO_URI:", process.env.MONGO_URI ? "Found" : "Not found");
 
 connectDB();
 
 // =======================
 // Start Server
 // =======================
-const server = app.listen(PORT, () => {
-  console.log("\n=================================");
-  console.log(`🚀 Event Service is running!`);
-  console.log(`📡 Port: ${PORT}`);
-  console.log(`⚡ Environment: ${process.env.NODE_ENV || "development"}`);
-  console.log(`🔗 Health check: http://localhost:${PORT}/health`);
-  console.log(`🔗 API Base: http://localhost:${PORT}/api/events`);
-  console.log("=================================\n");
-});
+const server = app.listen(PORT, () => {});
 
 // =======================
 // Handle unhandled promise rejections

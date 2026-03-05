@@ -1,3 +1,4 @@
+//src/controllers/event.controller.js
 const eventService = require("../services/event.service");
 const ApiResponse = require("../utils/response");
 const { AppError } = require("../middleware/errorHandler");

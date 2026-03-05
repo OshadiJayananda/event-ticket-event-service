@@ -1,3 +1,4 @@
+//src/middleware/errorHandler.js
 const ApiResponse = require("../utils/response");
 
 const errorHandler = (err, req, res, next) => {

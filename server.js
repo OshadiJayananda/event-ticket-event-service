@@ -1,3 +1,4 @@
+//server.js;
 require("dotenv").config();
 const app = require("./src/app"); // Make sure this path is correct
 const connectDB = require("./src/config/db");

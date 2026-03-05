@@ -1,3 +1,4 @@
+//src/services/event.service.js
 const Event = require("../models/event.model");
 const { AppError } = require("../middleware/errorHandler");
 

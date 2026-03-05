@@ -6,14 +6,26 @@ class EventController {
   // Create new event
   async createEvent(req, res, next) {
     try {
-      // In a real app, you'd get user ID from auth middleware
-      // req.body.createdBy = req.user.id;
-      req.body.createdBy = req.body.createdBy || "default-user-id";
+      const eventData = { ...req.body };
 
-      const event = await eventService.createEvent(req.body);
+      // Handle uploaded image (single image)
+      if (req.file) {
+        eventData.images = [
+          {
+            url: req.file.path,
+            caption: req.file.originalname,
+          },
+        ];
+      }
 
+      // Set createdBy (from auth middleware or default)
+      eventData.createdBy =
+        req.user?.id || req.body.createdBy || "default-user-id";
+
+      const event = await eventService.createEvent(eventData);
       return ApiResponse.success(res, event, "Event created successfully", 201);
     } catch (error) {
+      console.error("Upload error:", error);
       next(error);
     }
   }
@@ -47,11 +59,22 @@ class EventController {
     }
   }
 
-  // Update event
+  // Update event with image
   async updateEvent(req, res, next) {
     try {
-      const event = await eventService.updateEvent(req.params.id, req.body);
+      const updateData = { ...req.body };
 
+      // Handle new image if uploaded
+      if (req.file) {
+        updateData.images = [
+          {
+            url: req.file.path,
+            caption: req.file.originalname,
+          },
+        ];
+      }
+
+      const event = await eventService.updateEvent(req.params.id, updateData);
       return ApiResponse.success(res, event, "Event updated successfully");
     } catch (error) {
       next(error);
@@ -103,7 +126,7 @@ class EventController {
       const events = await eventService.getEventsByOrganizer(
         req.params.organizerId,
       );
-      console.log("Organizer , organizerId", req.params.organizerId);
+
       return ApiResponse.success(
         res,
         events,

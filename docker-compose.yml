@@ -1,0 +1,11 @@
+version: '3.8'
+services:
+  event-service:
+    image: oshadijayananda/event-service:latest
+    ports:
+      - "5003:5003"
+    environment:
+      - MONGO_URI=${MONGO_URI}
+      - PORT=5003
+    env_file:
+      - .env

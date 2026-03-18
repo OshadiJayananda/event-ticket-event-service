@@ -14,7 +14,31 @@ const app = express();
 // =======================
 // CORS Configuration
 // =======================
-const allowedOrigins = process.env.API_GATEWAY_URL;
+function normalizeOrigin(value) {
+  if (!value) {
+    return null;
+  }
+
+  const trimmedValue = value.trim();
+
+  if (!trimmedValue) {
+    return null;
+  }
+
+  if (/^https?:\/\//i.test(trimmedValue)) {
+    return trimmedValue;
+  }
+
+  return `http://localhost:${trimmedValue}`;
+}
+
+const allowedOrigins = [
+  normalizeOrigin(process.env.API_GATEWAY_URL),
+  ...String(process.env.ALLOWED_ORIGINS || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+].filter(Boolean);
 
 // Security middleware
 app.use(helmet());
@@ -22,7 +46,17 @@ app.use(helmet());
 // CORS middleware
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("Origin not allowed by CORS"), false);
+    },
     credentials: true,
   }),
 );
@@ -55,6 +89,13 @@ app.get("/health", (req, res) => {
   });
 });
 
+// =======================
+// API Routes
+// =======================
+app.use("/api/events", eventRoutes);
+
+
+
 // Root route
 app.get("/", (req, res) => {
   res.json({
@@ -63,11 +104,6 @@ app.get("/", (req, res) => {
     api: "/api/events for event endpoints",
   });
 });
-
-// =======================
-// API Routes
-// =======================
-app.use("/api/events", eventRoutes);
 
 // =======================
 // 404 Handler

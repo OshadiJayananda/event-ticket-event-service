@@ -6,8 +6,8 @@ const { uploadEventImage } = require("../middleware/upload"); // Changed import
 
 // Public routes
 router.get("/", eventController.getAllEvents);
-router.get("/:id", eventController.getEventById);
 router.get("/organizer/:organizerId", eventController.getEventsByOrganizer);
+router.get("/:id", eventController.getEventById);
 
 // Protected routes (in real app, add auth middleware)
 router.post("/", uploadEventImage, eventController.createEvent); // Changed to uploadEventImage

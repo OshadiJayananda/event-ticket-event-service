@@ -3,10 +3,70 @@ const Event = require("../models/event.model");
 const { AppError } = require("../middleware/errorHandler");
 
 class EventService {
-  // Create new event
-  async createEvent(eventData) {
+  getApiGatewayUrl() {
+    const rawValue = process.env.API_GATEWAY_URL;
+
+    if (/^https?:\/\//i.test(rawValue)) {
+      return rawValue;
+    }
+
+    return `http://localhost:${rawValue}`;
+  }
+
+  async resolveOrganizer(authorizationHeader) {
+    if (!authorizationHeader) {
+      throw new AppError("Authorization header is required", 401);
+    }
+
+    const apiGatewayUrl = this.getApiGatewayUrl();
+
+    let response;
+
     try {
-      const event = await Event.create(eventData);
+      response = await fetch(`${apiGatewayUrl}/api/users/me`, {
+        headers: {
+          Authorization: authorizationHeader,
+        },
+      });
+    } catch (error) {
+      throw new AppError(
+        "Failed to reach API gateway while resolving the event organizer",
+        502,
+      );
+    }
+
+    let payload = null;
+
+    try {
+      payload = await response.json();
+    } catch (error) {
+      payload = null;
+    }
+
+    if (!response.ok) {
+      throw new AppError(
+        payload?.message || "Unable to resolve organizer from user service",
+        response.status || 502,
+      );
+    }
+
+    const organizerId = payload?._id || payload?.id;
+
+    if (!organizerId) {
+      throw new AppError("Organizer ID was not returned by user service", 502);
+    }
+
+    return organizerId;
+  }
+
+  // Create new event
+  async createEvent(eventData, authorizationHeader) {
+    try {
+      const organizerId = await this.resolveOrganizer(authorizationHeader);
+      const event = await Event.create({
+        ...eventData,
+        createdBy: organizerId,
+      });
       return event;
     } catch (error) {
       throw error;

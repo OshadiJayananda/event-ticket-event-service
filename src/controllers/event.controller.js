@@ -19,11 +19,10 @@ class EventController {
         ];
       }
 
-      // Set createdBy (from auth middleware or default)
-      eventData.createdBy =
-        req.user?.id || req.body.createdBy || "default-user-id";
-
-      const event = await eventService.createEvent(eventData);
+      const event = await eventService.createEvent(
+        eventData,
+        req.headers.authorization,
+      );
       return ApiResponse.success(res, event, "Event created successfully", 201);
     } catch (error) {
       console.error("Upload error:", error);

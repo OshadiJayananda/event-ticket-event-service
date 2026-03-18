@@ -18,8 +18,8 @@ jobs:
         with:
           node-version: "18"
 
-      - name: Install dependencies with legacy peer deps
-        run: npm install --legacy-peer-deps
+      - name: Install dependencies
+        run: npm install
 
       - name: Build Docker image
         run: docker build -t ${{ secrets.DOCKER_USERNAME }}/event-service:latest .

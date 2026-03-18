@@ -14,9 +14,7 @@ const app = express();
 // =======================
 // CORS Configuration
 // =======================
-const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(",")
-  : [];
+const allowedOrigins = process.env.API_GATEWAY_URL;
 
 // Security middleware
 app.use(helmet());

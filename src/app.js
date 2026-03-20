@@ -14,7 +14,13 @@ const app = express();
 // =======================
 // CORS Configuration
 // =======================
-const allowedOrigins = process.env.API_GATEWAY_URL;
+const allowedOrigins = [
+  process.env.API_GATEWAY_URL,
+  process.env.FRONTEND_URL,
+  "http://localhost:8086", // API Gateway
+  "http://localhost:8080",
+  "http://localhost:3000", // Frontend
+].filter(Boolean);
 
 // Security middleware
 app.use(helmet());

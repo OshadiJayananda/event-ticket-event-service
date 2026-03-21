@@ -1,11 +1,54 @@
 const Event = require("../models/event.model");
 const { AppError } = require("../middleware/errorHandler");
+const { sendNotificationEvent } = require("./notification.service");
+
+function buildEventMetadata(event, extra = {}) {
+  return {
+    eventId: event._id.toString(),
+    eventTitle: event.name,
+    venue: event.venue,
+    eventDate: event.date,
+    totalSeats: event.totalSeats,
+    availableSeats: event.availableSeats,
+    ticketPrice: event.ticketPrice,
+    status: event.status,
+    ...extra,
+  };
+}
+
+async function dispatchNotification(payload, token) {
+  if (!token) {
+    return;
+  }
+
+  try {
+    await sendNotificationEvent(payload, token);
+  } catch (error) {
+    console.error("Failed to dispatch event notification:", error.message);
+  }
+}
 
 class EventService {
   // Create new event
-  async createEvent(eventData) {
+  async createEvent(eventData, context = {}) {
     try {
       const event = await Event.create(eventData);
+
+      await dispatchNotification(
+        {
+          eventType: "EVENT_CREATED",
+          source: "EVENT_SERVICE",
+          entityId: event._id.toString(),
+          entityType: "EVENT",
+          actorUserId: context.actorUserId || event.createdBy,
+          recipients: {
+            roles: ["ADMIN"],
+          },
+          metadata: buildEventMetadata(event),
+        },
+        context.token,
+      );
+
       return event;
     } catch (error) {
       throw error;
@@ -142,7 +185,7 @@ class EventService {
   }
 
   // Update event
-  async updateEvent(eventId, updateData) {
+  async updateEvent(eventId, updateData, context = {}) {
     try {
       // Prevent updating certain fields
       delete updateData.availableSeats;
@@ -167,6 +210,20 @@ class EventService {
       }
 
       await event.save();
+      await dispatchNotification(
+        {
+          eventType: "EVENT_UPDATED",
+          source: "EVENT_SERVICE",
+          entityId: event._id.toString(),
+          entityType: "EVENT",
+          actorUserId: context.actorUserId || event.createdBy,
+          recipients: {
+            roles: ["ADMIN"],
+          },
+          metadata: buildEventMetadata(event),
+        },
+        context.token,
+      );
 
       return event;
     } catch (error) {
@@ -175,7 +232,7 @@ class EventService {
   }
 
   // Delete event (soft delete - just change status)
-  async deleteEvent(eventId) {
+  async deleteEvent(eventId, context = {}) {
     try {
       const event = await Event.findByIdAndUpdate(
         eventId,
@@ -186,6 +243,21 @@ class EventService {
       if (!event) {
         throw new AppError("Event not found", 404);
       }
+
+      await dispatchNotification(
+        {
+          eventType: "EVENT_DELETED",
+          source: "EVENT_SERVICE",
+          entityId: event._id.toString(),
+          entityType: "EVENT",
+          actorUserId: context.actorUserId || event.createdBy,
+          recipients: {
+            roles: ["ADMIN"],
+          },
+          metadata: buildEventMetadata(event),
+        },
+        context.token,
+      );
 
       return event;
     } catch (error) {

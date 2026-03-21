@@ -55,7 +55,7 @@ const eventSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["Active", "Sold Out", "Completed", "Cancelled"], // Added "Sold Out"
+      enum: ["Active", "Sold Out", "Completed", "Cancelled"],
       default: "Active",
     },
     createdBy: {
@@ -79,36 +79,36 @@ eventSchema.methods.updateStatusAutomatically = function () {
   const now = new Date();
   const eventDate = new Date(this.date);
 
-  // If event is cancelled, keep it cancelled
   if (this.status === "Cancelled") {
     return;
   }
 
-  // If event date has passed, mark as completed
   if (eventDate < now) {
     this.status = "Completed";
-  }
-  // If no seats available, mark as sold out
-  else if (this.availableSeats === 0) {
+  } else if (this.availableSeats === 0) {
     this.status = "Sold Out";
-  }
-  // Otherwise keep active
-  else {
+  } else {
     this.status = "Active";
   }
 };
 
 // Pre-save middleware to update status
-eventSchema.pre("save", function (next) {
+eventSchema.pre("save", function () {
   this.updateStatusAutomatically();
 });
 
-// Pre-save middleware to set availableSeats equal to totalSeats for new events
-eventSchema.pre("validate", function (next) {
+// Pre-validate middleware to set availableSeats equal to totalSeats for new events
+eventSchema.pre("validate", function () {
   if (this.isNew) {
     this.availableSeats = this.totalSeats;
   }
 });
+
+// Method to check whether enough seats remain for the requested booking.
+eventSchema.methods.hasAvailableSeats = function (quantity) {
+  return this.availableSeats >= quantity;
+};
+
 // Method to update seats
 eventSchema.methods.updateSeats = async function (
   quantity,

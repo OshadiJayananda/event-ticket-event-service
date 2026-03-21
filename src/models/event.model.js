@@ -1,4 +1,3 @@
-//src/models/event.model.js
 const mongoose = require("mongoose");
 
 const eventSchema = new mongoose.Schema(
@@ -56,11 +55,11 @@ const eventSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["Active", "Cancelled", "Completed"],
+      enum: ["Active", "Sold Out", "Completed", "Cancelled"], // Added "Sold Out"
       default: "Active",
     },
     createdBy: {
-      type: String, // Will store user ID from User Service
+      type: String,
       required: true,
     },
     images: [
@@ -71,33 +70,46 @@ const eventSchema = new mongoose.Schema(
     ],
   },
   {
-    timestamps: true, // Automatically adds createdAt and updatedAt
+    timestamps: true,
   },
 );
 
-// Index for better query performance
-eventSchema.index({ date: 1, status: 1 });
-eventSchema.index({ category: 1 });
+// Method to update status based on date and availability
+eventSchema.methods.updateStatusAutomatically = function () {
+  const now = new Date();
+  const eventDate = new Date(this.date);
 
-// Virtual for checking if event is sold out
-eventSchema.virtual("isSoldOut").get(function () {
-  return this.availableSeats === 0;
-});
+  // If event is cancelled, keep it cancelled
+  if (this.status === "Cancelled") {
+    return;
+  }
 
-// Virtual for percentage of seats sold
-eventSchema.virtual("soldPercentage").get(function () {
-  return (
-    ((this.totalSeats - this.availableSeats) / this.totalSeats) *
-    100
-  ).toFixed(2);
-});
-
-// Method to check if seats are available
-eventSchema.methods.hasAvailableSeats = function (quantity) {
-  return this.availableSeats >= quantity;
+  // If event date has passed, mark as completed
+  if (eventDate < now) {
+    this.status = "Completed";
+  }
+  // If no seats available, mark as sold out
+  else if (this.availableSeats === 0) {
+    this.status = "Sold Out";
+  }
+  // Otherwise keep active
+  else {
+    this.status = "Active";
+  }
 };
 
-// Method to update seats (will be used by booking service)
+// Pre-save middleware to update status
+eventSchema.pre("save", function (next) {
+  this.updateStatusAutomatically();
+});
+
+// Pre-save middleware to set availableSeats equal to totalSeats for new events
+eventSchema.pre("validate", function (next) {
+  if (this.isNew) {
+    this.availableSeats = this.totalSeats;
+  }
+});
+// Method to update seats
 eventSchema.methods.updateSeats = async function (
   quantity,
   operation = "decrease",
@@ -115,15 +127,6 @@ eventSchema.methods.updateSeats = async function (
   }
   return this.save();
 };
-
-// Pre-save middleware to set availableSeats equal to totalSeats for new events
-// Pre-save middleware to set availableSeats equal to totalSeats for new events
-eventSchema.pre("validate", function (next) {
-  if (this.isNew) {
-    this.availableSeats = this.totalSeats;
-  }
-  // next();
-});
 
 const Event = mongoose.model("Event", eventSchema);
 

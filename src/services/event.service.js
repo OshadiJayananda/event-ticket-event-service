@@ -1,4 +1,3 @@
-//src/services/event.service.js
 const Event = require("../models/event.model");
 const { AppError } = require("../middleware/errorHandler");
 
@@ -51,6 +50,38 @@ class EventService {
         ];
       }
 
+      // First, update all events that need status change
+      const now = new Date();
+
+      // Update events that are past their date to "Completed"
+      await Event.updateMany(
+        {
+          date: { $lt: now },
+          status: { $in: ["Active", "Sold Out"] },
+        },
+        { status: "Completed" },
+      );
+
+      // Update events with no seats available to "Sold Out" (if not already completed)
+      await Event.updateMany(
+        {
+          availableSeats: 0,
+          date: { $gte: now },
+          status: "Active",
+        },
+        { status: "Sold Out" },
+      );
+
+      // Update events with seats available to "Active" (if not completed)
+      await Event.updateMany(
+        {
+          availableSeats: { $gt: 0 },
+          date: { $gte: now },
+          status: "Sold Out",
+        },
+        { status: "Active" },
+      );
+
       // Pagination
       const skip = (parseInt(page) - 1) * parseInt(limit);
 
@@ -68,6 +99,7 @@ class EventService {
           page: parseInt(page),
           limit: parseInt(limit),
           total,
+          pages: Math.ceil(total / parseInt(limit)),
         },
       };
     } catch (error) {
@@ -82,6 +114,27 @@ class EventService {
       if (!event) {
         throw new AppError("Event not found", 404);
       }
+
+      // Check and update status
+      const now = new Date();
+      let needsUpdate = false;
+
+      if (new Date(event.date) < now && event.status !== "Completed") {
+        event.status = "Completed";
+        needsUpdate = true;
+      } else if (
+        event.availableSeats === 0 &&
+        event.status !== "Sold Out" &&
+        event.status !== "Completed"
+      ) {
+        event.status = "Sold Out";
+        needsUpdate = true;
+      }
+
+      if (needsUpdate) {
+        await event.save();
+      }
+
       return event;
     } catch (error) {
       throw error;
@@ -95,14 +148,25 @@ class EventService {
       delete updateData.availableSeats;
       delete updateData._id;
 
-      const event = await Event.findByIdAndUpdate(eventId, updateData, {
-        new: true,
-        runValidators: true,
-      });
-
+      const event = await Event.findById(eventId);
       if (!event) {
         throw new AppError("Event not found", 404);
       }
+
+      // Update fields
+      Object.assign(event, updateData);
+
+      // Update status automatically
+      const now = new Date();
+      if (new Date(event.date) < now) {
+        event.status = "Completed";
+      } else if (event.availableSeats === 0) {
+        event.status = "Sold Out";
+      } else {
+        event.status = "Active";
+      }
+
+      await event.save();
 
       return event;
     } catch (error) {
@@ -138,7 +202,23 @@ class EventService {
         throw new AppError("Event not found", 404);
       }
 
+      // Check if event is still bookable
+      if (event.status === "Completed") {
+        throw new AppError("Cannot book seats for completed events", 400);
+      }
+
+      if (event.status === "Cancelled") {
+        throw new AppError("Event has been cancelled", 400);
+      }
+
+      // Update seats using the model method
       await event.updateSeats(quantity, operation);
+
+      // Update status based on new seat availability
+      if (event.availableSeats === 0 && event.status !== "Completed") {
+        event.status = "Sold Out";
+        await event.save();
+      }
 
       return event;
     } catch (error) {

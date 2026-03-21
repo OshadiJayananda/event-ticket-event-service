@@ -21,9 +21,12 @@ class EventController {
 
       // Set createdBy (from auth middleware or default)
       eventData.createdBy =
-        req.user?.id || req.body.createdBy || "default-user-id";
+        req.user?.id || req.user?._id || req.body.createdBy || "default-user-id";
 
-      const event = await eventService.createEvent(eventData);
+      const event = await eventService.createEvent(eventData, {
+        actorUserId: req.user?.id || req.user?._id || eventData.createdBy,
+        token: req.token,
+      });
       return ApiResponse.success(res, event, "Event created successfully", 201);
     } catch (error) {
       console.error("Upload error:", error);
@@ -75,7 +78,10 @@ class EventController {
         ];
       }
 
-      const event = await eventService.updateEvent(req.params.id, updateData);
+      const event = await eventService.updateEvent(req.params.id, updateData, {
+        actorUserId: req.user?.id || req.user?._id || null,
+        token: req.token,
+      });
       return ApiResponse.success(res, event, "Event updated successfully");
     } catch (error) {
       next(error);
@@ -85,7 +91,10 @@ class EventController {
   // Delete event
   async deleteEvent(req, res, next) {
     try {
-      const event = await eventService.deleteEvent(req.params.id);
+      const event = await eventService.deleteEvent(req.params.id, {
+        actorUserId: req.user?.id || req.user?._id || null,
+        token: req.token,
+      });
 
       return ApiResponse.success(res, event, "Event cancelled successfully");
     } catch (error) {
@@ -106,6 +115,10 @@ class EventController {
         req.params.id,
         quantity,
         operation,
+        {
+          actorUserId: req.user?.id || req.user?._id || null,
+          token: req.token,
+        },
       );
 
       return ApiResponse.success(

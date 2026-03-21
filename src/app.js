@@ -7,6 +7,7 @@ const helmet = require("helmet");
 const eventRoutes = require("./routes/event.routes"); // Make sure this is event.routes, not eventRoutes
 
 // Import middleware
+const { attachUserIfPresent } = require("./middleware/auth.middleware");
 const { errorHandler } = require("./middleware/errorHandler");
 
 const app = express();
@@ -38,6 +39,7 @@ app.use(
 // =======================
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(attachUserIfPresent);
 
 // =======================
 // Request Logging Middleware

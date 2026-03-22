@@ -1,0 +1,353 @@
+openapi: 3.0.3
+info:
+  title: Event Ticket Event Service API
+  description: |
+    Microservice for managing events, venues, and ticket availability.
+    Includes integration with Notification Service for event lifecycle updates.
+  version: 1.0.0
+servers:
+  - url: http://localhost:5003
+    description: API Gateway (Development)
+  - url: /api/events
+    description: Relative path from service root
+
+tags:
+  - name: Events
+    description: Operations related to event management
+  - name: Internal
+    description: Internal service-to-service endpoints
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Event:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "65f1a2b3c4d5e6f7a8b9c0d1"
+        name:
+          type: string
+          maxLength: 100
+          example: "Summer Tech Conference 2026"
+        description:
+          type: string
+          example: "A three-day conference covering the latest in AI and Web Development."
+        date:
+          type: string
+          format: date-time
+          example: "2026-07-15T09:00:00.000Z"
+        venue:
+          type: string
+          example: "Convention Center, Grand Hall"
+        totalSeats:
+          type: integer
+          minimum: 1
+          example: 500
+        availableSeats:
+          type: integer
+          example: 450
+        ticketPrice:
+          type: number
+          minimum: 0
+          example: 99.99
+        category:
+          type: string
+          enum: [Concert, Conference, Sports, Theater, Workshop, Other]
+          example: "Conference"
+        status:
+          type: string
+          enum: [Active, Sold Out, Completed, Cancelled]
+          example: "Active"
+        createdBy:
+          type: string
+          example: "user_12345"
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventImage'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    EventImage:
+      type: object
+      properties:
+        url:
+          type: string
+          example: "https://res.cloudinary.com/demo/image/upload/event_hall.jpg"
+        caption:
+          type: string
+          example: "Main Stage"
+
+    EventCreate:
+      type: object
+      required:
+        - name
+        - description
+        - date
+        - venue
+        - totalSeats
+        - ticketPrice
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+        date:
+          type: string
+          format: date-time
+        venue:
+          type: string
+        totalSeats:
+          type: integer
+          minimum: 1
+        ticketPrice:
+          type: number
+          minimum: 0
+        category:
+          type: string
+          enum: [Concert, Conference, Sports, Theater, Workshop, Other]
+        images:
+          type: string
+          format: binary
+          description: Event cover image file
+
+    EventUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+        date:
+          type: string
+          format: date-time
+        venue:
+          type: string
+        totalSeats:
+          type: integer
+          minimum: 1
+        ticketPrice:
+          type: number
+          minimum: 0
+        category:
+          type: string
+          enum: [Concert, Conference, Sports, Theater, Workshop, Other]
+        images:
+          type: string
+          format: binary
+
+    SeatUpdate:
+      type: object
+      required:
+        - quantity
+      properties:
+        quantity:
+          type: integer
+          minimum: 1
+          example: 2
+        operation:
+          type: string
+          enum: [increase, decrease]
+          default: decrease
+
+    ApiResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Action completed successfully"
+        data:
+          type: object
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: "Detailed error message"
+        timestamp:
+          type: string
+          format: date-time
+
+paths:
+  /api/events:
+    get:
+      tags:
+        - Events
+      summary: Get all events
+      description: Retrieve a paginated list of events with optional filters.
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 9
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: minPrice
+          in: query
+          schema:
+            type: number
+        - name: maxPrice
+          in: query
+          schema:
+            type: number
+        - name: search
+          in: query
+          description: Search in name, description, or venue
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful retrieval
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - Events
+      summary: Create new event
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EventCreate'
+      responses:
+        '201':
+          description: Event created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Validation error
+        '401':
+          description: Unauthorized
+
+  /api/events/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - Events
+      summary: Get event details
+      responses:
+        '200':
+          description: Event found
+        '404':
+          description: Event not found
+
+    put:
+      tags:
+        - Events
+      summary: Update event
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EventUpdate'
+      responses:
+        '200':
+          description: Event updated
+        '404':
+          description: Event not found
+
+    delete:
+      tags:
+        - Events
+      summary: Cancel event
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Event cancelled
+        '404':
+          description: Event not found
+
+  /api/events/organizer/{organizerId}:
+    get:
+      tags:
+        - Events
+      summary: List events by organizer
+      parameters:
+        - name: organizerId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of events
+
+  /api/events/{id}/seats:
+    put:
+      tags:
+        - Internal
+      summary: Update available seats
+      description: Endpoint used by the Booking Service to adjust inventory.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SeatUpdate'
+      responses:
+        '200':
+          description: Seats updated
+        '400':
+          description: Insufficient seats or invalid request
+        '404':
+          description: Event not found

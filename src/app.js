@@ -2,15 +2,27 @@
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
+const swaggerUi = require("swagger-ui-express");
+const YAML = require("yamljs");
+const path = require("path");
 
-// Import routes - NOTE THE CORRECT FILENAME WITH DOT
-const eventRoutes = require("./routes/event.routes"); // Make sure this is event.routes, not eventRoutes
+// Load swagger.yaml
+const swaggerPath = path.join(__dirname, "..", "swagger.yaml");
+const swaggerDocument = YAML.load(swaggerPath);
+
+// Import routes
+const eventRoutes = require("./routes/event.routes");
 
 // Import middleware
 const { attachUserIfPresent } = require("./middleware/auth.middleware");
 const { errorHandler } = require("./middleware/errorHandler");
 
 const app = express();
+
+// =======================
+// Swagger Documentation
+// =======================
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // =======================
 // CORS Configuration
